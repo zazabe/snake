@@ -122,7 +122,8 @@ SNAKE.Snake = SNAKE.Snake || (function() {
             rowShift = [-1, 0, 1, 0],
             xPosShift = [],
             yPosShift = [],
-            snakeSpeed = 75,
+            snakeSpeed = 100,
+            headStyle = 'snake-head-right',
             isDead = false;
         
         // ----- public variables -----
@@ -166,6 +167,7 @@ SNAKE.Snake = SNAKE.Snake || (function() {
             for (var ii = 1; ii < num; ii++){
                 tempBlock = new SnakeBlock();
                 tempBlock.elm = tempNode.cloneNode(true);
+                tempBlock.elm.style = 'snake-snakebody-block snake-snakebody-alive';
                 tempBlock.elmStyle = tempBlock.elm.style;
                 playingBoard.getBoardContainer().appendChild( tempBlock.elm );
                 blockPool[blockPool.length] = tempBlock;
@@ -196,29 +198,37 @@ SNAKE.Snake = SNAKE.Snake || (function() {
             
             var snakeLength = me.snakeLength;
             var lastMove = moveQueue[0] || currentDirection;
+            var headStyle = '';
 
             switch (keyNum) {
                 case 37:
                     if ( lastMove !== 1 || snakeLength === 1 ) {
+                        me.headStyle = 'snake-head-left';
                         moveQueue.unshift(3); //SnakeDirection = 3;
                     }
                     break;    
                 case 38:
                     if ( lastMove !== 2 || snakeLength === 1 ) {
+                        me.headStyle = 'snake-head-top';
                         moveQueue.unshift(0);//SnakeDirection = 0;
                     }
                     break;    
                 case 39:
                     if ( lastMove !== 3 || snakeLength === 1 ) {
+                        me.headStyle = 'snake-head-right';
                         moveQueue.unshift(1); //SnakeDirection = 1;
                     }
                     break;    
                 case 40:
                     if ( lastMove !== 0 || snakeLength === 1 ) {
+                        me.headStyle = 'snake-head-bottom';
                         moveQueue.unshift(2);//SnakeDirection = 2;
                     }
                     break;  
             }
+            
+            
+            
         };
         
         /**
@@ -231,6 +241,8 @@ SNAKE.Snake = SNAKE.Snake || (function() {
                 newHead = me.snakeTail,
                 myDirection = currentDirection,
                 grid = playingBoard.grid; // cache grid for quicker lookup
+        
+            document.getElementById('snakePlaceholder_' + me.snakeHead.row + '_'+ me.snakeHead.col).style.visibility = 'hidden';
         
             me.snakeTail = newHead.prev;
             me.snakeHead = newHead;
@@ -253,6 +265,15 @@ SNAKE.Snake = SNAKE.Snake || (function() {
                 newHead.elmStyle = newHead.elm.style;
             }
             
+            var blocks = document.getElementsByClassName('snake-snakebody-block');
+            for(var index in blocks){
+                if(blocks[index].className){
+                    blocks[index].className = blocks[index].className.replace(/\bsnake-head-[a-z]+\b/,'');    
+                }
+                
+            }
+            newHead.elm.className = newHead.elm.className + ' ' + me.headStyle;
+            
             newHead.elmStyle.left = newHead.xPos + "px";
             newHead.elmStyle.top = newHead.yPos + "px";
 
@@ -268,6 +289,7 @@ SNAKE.Snake = SNAKE.Snake || (function() {
                 me.eatFood();
                 setTimeout(function(){me.go();}, snakeSpeed);
             }
+            
         };
         
         /**
@@ -287,7 +309,8 @@ SNAKE.Snake = SNAKE.Snake || (function() {
                 index = "b" + me.snakeLength++;
                 me.snakeBody[index] = blocks[ii];
                 me.snakeBody[index].prev = prevNode;
-                me.snakeBody[index].elm.className = me.snakeHead.elm.className.replace(/\bsnake-snakebody-dead\b/,'')
+                me.snakeHead.elm.className.replace(/\bsnake-snakebody-dead\b/,'');
+                me.snakeBody[index].elm.className = me.snakeHead.elm.className;
                 me.snakeBody[index].elm.className += " snake-snakebody-alive";
                 prevNode.next = me.snakeBody[index];
                 prevNode = me.snakeBody[index];
@@ -577,7 +600,6 @@ SNAKE.Board = SNAKE.Board || (function() {
             
             elmAboutPanel = document.createElement("div");
             elmAboutPanel.className = "snake-panel-component";
-            elmAboutPanel.innerHTML = "<a href='http://patorjk.com/blog/software/' class='snake-link'>more patorjk.com apps</a> - <a href='https://github.com/patorjk/JavaScript-Snake' class='snake-link'>source code</a>";
             
             elmLengthPanel = document.createElement("div");
             elmLengthPanel.className = "snake-panel-component";
@@ -613,6 +635,10 @@ SNAKE.Board = SNAKE.Board || (function() {
         function maxBoardHeight() {
             return MAX_BOARD_ROWS * me.getBlockHeight();
         }
+        
+       
+       
+        
         
         function createWelcomeElement() {
             var tmpElm = document.createElement("div");
@@ -777,7 +803,6 @@ SNAKE.Board = SNAKE.Board || (function() {
                 cLeft = 0;
                 cWidth = getClientWidth()-5;
                 cHeight = getClientHeight()-5;
-                document.body.style.backgroundColor = "#FC5454";
             } else {
                 cTop = config.top;
                 cLeft = config.left;
@@ -819,6 +844,25 @@ SNAKE.Board = SNAKE.Board || (function() {
                 elmAboutPanel.style.display = "block";
             }
             
+            
+            var addHolder = function(row, col, target){
+                var id = 'snakePlaceholder_' + (row+1) + '_'+ (col+1), holder = document.getElementById(id);
+                if(holder){
+                    holder.style.visibility = 'visible';
+                }
+                else {
+                    holder = document.createElement("div");
+                    holder.className = 'snake-placeholder';
+                    holder.id = id;
+                    holder.style.position = 'absolute';
+                    holder.style.top = row * me.getBlockWidth() + "px";
+                    holder.style.left = col * me.getBlockHeight() + "px";
+                    holder.style.width =  me.getBlockWidth() + "px";
+                    holder.style.height =  me.getBlockHeight() + "px";
+                    target.appendChild(holder);    
+                }
+            };
+            
             me.grid = [];
             var numBoardCols = fWidth / me.getBlockWidth() + 2;
             var numBoardRows = fHeight / me.getBlockHeight() + 2;
@@ -826,6 +870,7 @@ SNAKE.Board = SNAKE.Board || (function() {
             for (var row = 0; row < numBoardRows; row++) {
                 me.grid[row] = [];
                 for (var col = 0; col < numBoardCols; col++) {
+                    addHolder(row, col, elmPlayingField);
                     if (col === 0 || row === 0 || col === (numBoardCols-1) || row === (numBoardRows-1)) {
                         me.grid[row][col] = 1; // an edge
                     } else {
